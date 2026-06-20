@@ -1,0 +1,12 @@
+{
+  "name": "pulse-slice",
+  "version": "1.0.0",
+  "description": "A WebXR rhythm slicer — slice color-matched blocks on the beat. Plays on a laptop (mouse) or in a Meta Quest headset (controllers).",
+  "type": "module",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "start": "python -m http.server 8000"
+  },
+  "keywords": ["webxr", "vr", "three.js", "rhythm-game", "beat-saber", "quest"],
+  "license": "MIT"
+}

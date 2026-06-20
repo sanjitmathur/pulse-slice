@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PULSE SLICE — logic tests</title>
+  <style>
+    body { font-family: ui-monospace, monospace; background:#0b0e18; color:#cdd6ff; padding:24px; }
+    .ok { color:#6cf0c2; } .fail { color:#ff5a6a; } h1 { color:#fff; }
+  </style>
+</head>
+<body>
+  <h1>PULSE SLICE — pure-logic tests</h1>
+  <p>The full suite also runs headless: <code>node test/run.mjs</code></p>
+  <pre id="out"></pre>
+  <script type="module">
+    import { createScoreState, applyHit, applyMiss, comboMultiplier, accuracy } from '../src/scoring.js';
+    import { matchesColor, matchesDirection, judgeSlice } from '../src/slicing.js';
+    import { Scheduler, spawnTime } from '../src/scheduler.js';
+    import { buildBeatmap } from '../src/beatmap.js';
+
+    const out = document.getElementById('out');
+    let pass = 0, fail = 0;
+    const ok = (cond, name) => {
+      const line = document.createElement('div');
+      line.className = cond ? 'ok' : 'fail';
+      line.textContent = (cond ? '  ok - ' : 'FAIL - ') + name;
+      out.appendChild(line);
+      cond ? pass++ : fail++;
+    };
+
+    ok(comboMultiplier(14) === 8, 'combo multiplier maxes at 8x');
+    const s = createScoreState(); applyHit(s, 4); ok(s.combo === 1 && s.score > 0, 'hit scores + builds combo');
+    applyMiss(s); ok(s.combo === 0, 'miss resets combo');
+    ok(accuracy(createScoreState()) === 1, 'empty accuracy is 1');
+    ok(matchesColor('red', 'red') && !matchesColor('red', 'blue'), 'color match');
+    ok(matchesDirection({x:0,y:-5},'down') && !matchesDirection({x:0,y:5},'down'), 'direction match');
+    ok(judgeSlice('blue',{x:5,y:0},{color:'blue',dir:'right'}).ok, 'valid slice judged ok');
+    ok(spawnTime({t:5},2) === 3, 'spawn leads beat');
+    const sch = new Scheduler([{t:2},{t:3}],1); ok(sch.due(1).length===1 && sch.due(10).length===1, 'scheduler emits once');
+    ok(buildBeatmap().length > 30, 'beatmap non-empty');
+
+    const summary = document.createElement('h2');
+    summary.className = fail ? 'fail' : 'ok';
+    summary.textContent = fail ? `${fail} FAILED, ${pass} passed` : `All ${pass} tests passed.`;
+    out.appendChild(summary);
+  </script>
+</body>
+</html>

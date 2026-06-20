@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PULSE SLICE — WebXR rhythm slicer</title>
+  <style>
+    :root { --bg:#05060d; --ink:#e8ecff; --red:#ff2d55; --blue:#2d7dff; --mint:#6cf0c2; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+    canvas { display: block; }
+
+    #overlay { position: fixed; inset: 0; display: grid; place-items: center; z-index: 10;
+      background: radial-gradient(circle at 50% 30%, rgba(45,125,255,0.18), rgba(5,6,13,0.92) 70%); }
+    #overlay.hidden { display: none; }
+
+    .card { width: min(560px, 92vw); padding: 36px 34px; border-radius: 22px;
+      background: rgba(12,16,30,0.78); border: 1px solid rgba(120,150,255,0.18);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5); backdrop-filter: blur(8px); text-align: center; }
+
+    h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 6px; font-weight: 800;
+      background: linear-gradient(90deg, var(--red), var(--blue)); -webkit-background-clip: text;
+      background-clip: text; color: transparent; }
+    .tag { margin: 0 0 22px; color: #97a2cf; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+
+    .btn { display: block; width: 100%; margin: 10px 0; padding: 16px; font-size: 17px; font-weight: 700;
+      border: 0; border-radius: 14px; cursor: pointer; color: #fff; transition: transform .08s ease, filter .15s ease; }
+    .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .btn.primary { background: linear-gradient(90deg, var(--blue), #6a3dff); }
+    .btn.ghost { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); }
+
+    .how { margin-top: 22px; text-align: left; font-size: 13.5px; line-height: 1.7; color: #aeb8e0; }
+    .how b { color: var(--ink); }
+    .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14); font-size:12px; }
+    .red { color: var(--red); } .blue { color: var(--blue); } .mint { color: var(--mint); }
+
+    .results h2 { font-size: 28px; margin: 0 0 16px; letter-spacing: 2px; }
+    .stat { display:flex; justify-content:space-between; padding:10px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-size:16px; }
+    .stat b { font-size: 20px; }
+
+    /* three.js VRButton gets restyled to sit bottom-center */
+    #VRButton { z-index: 20 !important; }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <!-- MENU -->
+    <div class="card" id="menu">
+      <h1>PULSE&nbsp;SLICE</h1>
+      <p class="tag">WebXR rhythm slicer</p>
+      <button class="btn primary" id="playDesktop">▶ Play on Laptop</button>
+      <button class="btn ghost" id="enterVR">🥽 Enter VR (Quest)</button>
+      <div class="how">
+        Slice each block with the <span class="red">red</span> /
+        <span class="blue">blue</span> saber that matches its color, in the
+        direction its <b>arrow</b> points.<br><br>
+        <b>Laptop:</b> move the mouse to swing.
+        <span class="pill">Hold L-click = <span class="blue">blue</span></span>
+        <span class="pill">Hold R-click = <span class="red">red</span></span>
+        <span class="pill">Esc = menu</span><br>
+        <b>VR:</b> left hand = <span class="red">red</span>, right hand =
+        <span class="blue">blue</span>. <b>Pull a trigger to start.</b>
+      </div>
+    </div>
+
+    <!-- RESULTS (hidden until a song ends) -->
+    <div class="card results" id="results" style="display:none">
+      <h2 id="resultTitle">SONG COMPLETE</h2>
+      <div class="stat"><span>Score</span><b id="rScore">0</b></div>
+      <div class="stat"><span>Max combo</span><b id="rCombo">0</b></div>
+      <div class="stat"><span>Accuracy</span><b id="rAcc">0%</b></div>
+      <button class="btn primary" id="playAgain" style="margin-top:22px">↻ Play again</button>
+      <button class="btn ghost" id="backMenu">Menu</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
