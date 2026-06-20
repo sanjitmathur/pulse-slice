@@ -16,7 +16,7 @@ perfectly in sync and there are no audio files to ship.
 
 ## ▶ Play
 
-**Live:** _GitHub Pages URL appears here once Pages finishes its first build._
+**Live:** https://sanjitmathur.github.io/pulse-slice/ — open this in the **Quest Browser**, then tap *Enter VR*.
 
 **Locally** (a server is required — ES modules + audio don't run from `file://`):
 
