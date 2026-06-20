@@ -136,6 +136,7 @@
     let blocks = [];
     let particles = [];
     let blockSpawnTimer = 0;
+    let shakeTimer = 0;
 
     // Three.js Setup
     const scene = new THREE.Scene();
@@ -164,6 +165,9 @@
     // Saber Setup
     const saberGroup = new THREE.Group();
     scene.add(saberGroup);
+
+    const handLight = new THREE.PointLight(COLOR_RED, 20, 10);
+    saberGroup.add(handLight);
 
     // Laptop: floating saber in front of camera
     // VR: attach to right controller
@@ -328,6 +332,7 @@
       const hex = saberColor === 'red' ? COLOR_RED : COLOR_BLUE;
       matArmor.color.setHex(hex);
       matArmor.emissive.setHex(hex);
+      handLight.color.setHex(hex);
       
       elColorInd.innerText = saberColor.toUpperCase();
       elColorInd.style.color = saberColor === 'red' ? 'var(--red)' : 'var(--blue)';
@@ -345,7 +350,7 @@
       mesh.position.set((Math.random() - 0.5) * 3, 1.0 + Math.random() * 0.8, SPAWN_Z);
       scene.add(mesh);
 
-      blocks.push({ mesh, colorType, dead: false });
+      blocks.push({ mesh, colorType, dead: false, rotX: (Math.random()-0.5)*2, rotY: (Math.random()-0.5)*2, rotZ: (Math.random()-0.5)*2, startY: mesh.position.y, timeOffset: Math.random() * 10 });
     }
 
     function spawnParticles(pos, colorHex) {
@@ -357,11 +362,12 @@
         
         const velocity = new THREE.Vector3(
           (Math.random() - 0.5) * 6,
-          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 6 + 2,
           (Math.random() - 0.5) * 6
         );
+        const angularVel = new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*15, (Math.random()-0.5)*15);
         scene.add(mesh);
-        particles.push({ mesh, velocity, life: 1.0 });
+        particles.push({ mesh, velocity, life: 1.0, angularVel });
       }
     }
 
@@ -376,6 +382,22 @@
       renderer.render(scene, camera);
 
       if (state !== 'playing') return;
+
+      // Camera Shake
+      if (shakeTimer > 0) {
+        shakeTimer -= dt;
+        camera.position.x = (Math.random() - 0.5) * 0.1;
+        camera.position.y = 1.6 + (Math.random() - 0.5) * 0.1;
+      } else {
+        camera.position.x = 0;
+        camera.position.y = 1.6;
+      }
+
+      // Moving Grid
+      gridHelper.position.z += (BLOCK_SPEED * 0.8) * dt;
+      if (gridHelper.position.z > 1) {
+        gridHelper.position.z -= 1;
+      }
 
       // Laptop Controls
       if (controlMode === 'laptop') {
@@ -401,6 +423,11 @@
         if (b.dead) continue;
 
         b.mesh.position.z += BLOCK_SPEED * dt;
+        b.mesh.rotation.x += b.rotX * dt;
+        b.mesh.rotation.y += b.rotY * dt;
+        b.mesh.rotation.z += b.rotZ * dt;
+        b.mesh.position.y = b.startY + Math.sin(clock.elapsedTime * 3 + b.timeOffset) * 0.15;
+
         blockBox.setFromObject(b.mesh);
 
         // Check Miss
@@ -408,6 +435,7 @@
           b.dead = true;
           if (b.colorType === saberColor) {
             lives--;
+            shakeTimer = 0.2;
             if (lives <= 0) endGame();
           }
           updateUI();
@@ -423,6 +451,7 @@
             updateSaberAppearance();
           } else {
             lives--;
+            shakeTimer = 0.2;
             if (lives <= 0) endGame();
           }
           updateUI();
@@ -445,7 +474,11 @@
           p.mesh.material.dispose();
           return false;
         }
+        p.velocity.y -= 15 * dt; // Gravity
         p.mesh.position.addScaledVector(p.velocity, dt);
+        p.mesh.rotation.x += p.angularVel.x * dt;
+        p.mesh.rotation.y += p.angularVel.y * dt;
+        p.mesh.rotation.z += p.angularVel.z * dt;
         p.mesh.scale.setScalar(p.life);
         return true;
       });
