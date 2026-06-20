@@ -3,76 +3,95 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PULSE SLICE — WebXR rhythm slicer</title>
+  <title>PULSE SLICE - Single File</title>
   <style>
-    :root { --bg:#05060d; --ink:#e8ecff; --red:#ff2d55; --blue:#2d7dff; --mint:#6cf0c2; }
+    :root {
+      --red: #ff2d55;
+      --blue: #2d7dff;
+      --bg: #05060d;
+      --text: #e8ecff;
+    }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
-      font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
     canvas { display: block; }
+    
+    #ui {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 10;
+    }
+    .panel {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(12, 16, 30, 0.85); border: 1px solid rgba(120, 150, 255, 0.2);
+      padding: 40px; border-radius: 20px; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      pointer-events: auto; width: min(90vw, 400px);
+    }
+    .hidden { display: none !important; }
+    
+    h1 { margin: 0 0 20px; font-size: 36px; letter-spacing: 4px; font-weight: 800; background: linear-gradient(90deg, var(--red), var(--blue)); -webkit-background-clip: text; color: transparent; }
+    h2 { margin: 0 0 20px; font-size: 28px; }
+    
+    .btn {
+      display: block; width: 100%; margin: 12px 0; padding: 16px; font-size: 16px; font-weight: 700;
+      border: 0; border-radius: 12px; cursor: pointer; color: #fff; transition: 0.1s;
+    }
+    .btn:hover { filter: brightness(1.15); transform: translateY(-2px); }
+    .btn-laptop { background: linear-gradient(90deg, #6a3dff, var(--blue)); }
+    .btn-vr { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+    .btn-restart { background: var(--red); }
 
-    #overlay { position: fixed; inset: 0; display: grid; place-items: center; z-index: 10;
-      background: radial-gradient(circle at 50% 30%, rgba(45,125,255,0.18), rgba(5,6,13,0.92) 70%); }
-    #overlay.hidden { display: none; }
+    /* HUD */
+    #hud {
+      position: absolute; top: 20px; left: 20px; right: 20px;
+      display: flex; justify-content: space-between; font-size: 24px; font-weight: bold;
+    }
+    .hud-box {
+      background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+    }
+    #color-indicator {
+      text-transform: uppercase; font-size: 18px; letter-spacing: 2px;
+    }
 
-    .card { width: min(560px, 92vw); padding: 36px 34px; border-radius: 22px;
-      background: rgba(12,16,30,0.78); border: 1px solid rgba(120,150,255,0.18);
-      box-shadow: 0 30px 80px rgba(0,0,0,0.5); backdrop-filter: blur(8px); text-align: center; }
-
-    h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 6px; font-weight: 800;
-      background: linear-gradient(90deg, var(--red), var(--blue)); -webkit-background-clip: text;
-      background-clip: text; color: transparent; }
-    .tag { margin: 0 0 22px; color: #97a2cf; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
-
-    .btn { display: block; width: 100%; margin: 10px 0; padding: 16px; font-size: 17px; font-weight: 700;
-      border: 0; border-radius: 14px; cursor: pointer; color: #fff; transition: transform .08s ease, filter .15s ease; }
-    .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
-    .btn.primary { background: linear-gradient(90deg, var(--blue), #6a3dff); }
-    .btn.ghost { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); }
-
-    .how { margin-top: 22px; text-align: left; font-size: 13.5px; line-height: 1.7; color: #aeb8e0; }
-    .how b { color: var(--ink); }
-    .pill { display:inline-block; padding:1px 8px; border-radius:6px; background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.14); font-size:12px; }
-    .red { color: var(--red); } .blue { color: var(--blue); } .mint { color: var(--mint); }
-
-    .results h2 { font-size: 28px; margin: 0 0 16px; letter-spacing: 2px; }
-    .stat { display:flex; justify-content:space-between; padding:10px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-size:16px; }
-    .stat b { font-size: 20px; }
-
-    /* three.js VRButton gets restyled to sit bottom-center */
+    /* VR Button */
     #VRButton { z-index: 20 !important; }
   </style>
 </head>
 <body>
-  <div id="overlay">
-    <!-- MENU -->
-    <div class="card" id="menu">
-      <h1>PULSE&nbsp;SLICE</h1>
-      <p class="tag">WebXR rhythm slicer</p>
-      <button class="btn primary" id="playDesktop">▶ Play on Laptop</button>
-      <button class="btn ghost" id="enterVR">🥽 Enter VR (Quest)</button>
-      <div class="how">
-        Slice each block with the <span class="red">red</span> /
-        <span class="blue">blue</span> saber that matches its color, in the
-        direction its <b>arrow</b> points.<br><br>
-        <b>Laptop:</b> move the mouse to swing.
-        <span class="pill">Hold L-click = <span class="blue">blue</span></span>
-        <span class="pill">Hold R-click = <span class="red">red</span></span>
-        <span class="pill">Esc = menu</span><br>
-        <b>VR:</b> left hand = <span class="red">red</span>, right hand =
-        <span class="blue">blue</span>. <b>Pull a trigger to start.</b>
+
+  <div id="ui">
+    <!-- Main Menu -->
+    <div id="menu" class="panel">
+      <h1>PULSE SLICE</h1>
+      <p style="color:#aaa; font-size:14px; margin-bottom:20px;">Match finger color. Don't miss!</p>
+      <button class="btn btn-laptop" id="btn-laptop">💻 Play on Laptop</button>
+      <button class="btn btn-vr" id="btn-vr">🥽 Play in VR</button>
+      <p style="font-size: 13px; color:#888; text-align:left; margin-top:20px;">
+        <b>Laptop:</b> Use <b>Left / Right Arrows</b> to move finger.<br>
+        <b>VR:</b> Finger attached to right controller.<br><br>
+        Finger changes color after every hit. Slice matching blocks, ignore others!
+      </p>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-box">
+        <div>Score: <span id="score-val">0</span></div>
+        <div style="font-size: 20px; margin-top: 5px;" id="lives-val">❤️❤️❤️</div>
+      </div>
+      <div class="hud-box" style="text-align: right; width: 200px;">
+        <div id="color-indicator" style="color: var(--red);">RED</div>
       </div>
     </div>
 
-    <!-- RESULTS (hidden until a song ends) -->
-    <div class="card results" id="results" style="display:none">
-      <h2 id="resultTitle">SONG COMPLETE</h2>
-      <div class="stat"><span>Score</span><b id="rScore">0</b></div>
-      <div class="stat"><span>Max combo</span><b id="rCombo">0</b></div>
-      <div class="stat"><span>Accuracy</span><b id="rAcc">0%</b></div>
-      <button class="btn primary" id="playAgain" style="margin-top:22px">↻ Play again</button>
-      <button class="btn ghost" id="backMenu">Menu</button>
+    <!-- Game Over -->
+    <div id="gameover" class="panel hidden">
+      <h2>GAME OVER</h2>
+      <p style="font-size: 20px; margin-bottom: 20px;">Final Score: <b id="final-score">0</b></p>
+      <button class="btn btn-restart" id="btn-restart">↻ Restart</button>
     </div>
   </div>
 
@@ -84,6 +103,360 @@
       }
     }
   </script>
-  <script type="module" src="./src/main.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+    // Constants
+    const COLOR_RED = 0xff2d55;
+    const COLOR_BLUE = 0x2d7dff;
+    const SWITCH_TIME = 2.0;
+    const SPAWN_Z = -15;
+    const SLICE_Z = 0;
+    const DESPAWN_Z = 2;
+    const BLOCK_SPEED = 8; // m/s
+    
+    // Elements
+    const elMenu = document.getElementById('menu');
+    const elHud = document.getElementById('hud');
+    const elGameOver = document.getElementById('gameover');
+    const elScore = document.getElementById('score-val');
+    const elLives = document.getElementById('lives-val');
+    const elColorInd = document.getElementById('color-indicator');
+    const elTimerBar = document.getElementById('timer-bar');
+    const elFinalScore = document.getElementById('final-score');
+
+    // Game State
+    let state = 'menu'; // menu, playing, gameover
+    let controlMode = 'laptop'; // laptop, vr
+    let score = 0;
+    let lives = 3;
+    let saberColor = 'red'; // 'red' or 'blue'
+    let blocks = [];
+    let particles = [];
+    let blockSpawnTimer = 0;
+
+    // Three.js Setup
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05060d, 0.05);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
+    camera.position.set(0, 1.6, 2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    document.body.appendChild(VRButton.createButton(renderer));
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x404040));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight.position.set(0, 10, 5);
+    scene.add(dirLight);
+
+    // Environment Grid
+    const gridHelper = new THREE.GridHelper(40, 40, 0x2d7dff, 0x111122);
+    gridHelper.position.y = 0;
+    scene.add(gridHelper);
+
+    // Saber Setup
+    const saberGroup = new THREE.Group();
+    scene.add(saberGroup);
+
+    // Laptop: floating saber in front of camera
+    // VR: attach to right controller
+    const controller = renderer.xr.getController(0); // Right hand typically
+    scene.add(controller);
+
+    // Procedural Robotic Hand
+    const handGroup = new THREE.Group();
+    
+    // Materials
+    const matArmor = new THREE.MeshStandardMaterial({ 
+      color: COLOR_RED, emissive: COLOR_RED, emissiveIntensity: 0.8,
+      metalness: 0.5, roughness: 0.3
+    });
+    const matJoint = new THREE.MeshStandardMaterial({ 
+      color: 0x999999, metalness: 0.9, roughness: 0.1 
+    });
+
+    // 1. Palm
+    const palmGeo = new THREE.BoxGeometry(0.08, 0.1, 0.04);
+    const palm = new THREE.Mesh(palmGeo, matArmor);
+    palm.position.set(0, 0, 0);
+    handGroup.add(palm);
+
+    // Helpers
+    function addJoint(x, y, z) {
+      const geo = new THREE.CylinderGeometry(0.013, 0.013, 0.035, 12);
+      geo.rotateZ(Math.PI / 2);
+      const mesh = new THREE.Mesh(geo, matJoint);
+      mesh.position.set(x, y, z);
+      handGroup.add(mesh);
+    }
+    function addSegment(x, y, z, w, h, d, isTip=false) {
+      let geo = isTip ? new THREE.CapsuleGeometry(w/2, h - w, 4, 8) : new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, matArmor);
+      mesh.position.set(x, y, z);
+      handGroup.add(mesh);
+    }
+
+    // 2. Index Finger (Pointing Up)
+    addJoint(-0.025, 0.05, 0);
+    addSegment(-0.025, 0.075, 0, 0.018, 0.04, 0.02);
+    addJoint(-0.025, 0.10, 0);
+    addSegment(-0.025, 0.12, 0, 0.016, 0.03, 0.018);
+    addJoint(-0.025, 0.14, 0);
+    addSegment(-0.025, 0.16, 0, 0.014, 0.03, 0.016, true);
+
+    // 3. Folded Fingers (Middle, Ring, Pinky)
+    [ 0.0, 0.025, 0.05 ].forEach(x => {
+      let adjX = x - 0.012; // shift left to fit on palm
+      addJoint(adjX, 0.05, 0);
+      const seg1 = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.03, 0.02), matArmor);
+      seg1.position.set(adjX, 0.05, 0.02);
+      seg1.rotation.x = Math.PI / 2; 
+      handGroup.add(seg1);
+      
+      const j2 = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.025, 12), matJoint);
+      j2.rotation.z = Math.PI / 2;
+      j2.position.set(adjX, 0.035, 0.035);
+      handGroup.add(j2);
+
+      const seg2 = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.03, 0.018), matArmor);
+      seg2.position.set(adjX, 0.02, 0.035);
+      seg2.rotation.x = Math.PI; 
+      handGroup.add(seg2);
+    });
+
+    // 4. Thumb (folded across palm)
+    const thumbJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.03, 12), matJoint);
+    thumbJoint.rotation.x = Math.PI / 2;
+    thumbJoint.position.set(-0.05, 0.0, 0.01);
+    handGroup.add(thumbJoint);
+
+    const thumbSeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.03, 4, 8), matArmor);
+    thumbSeg.rotation.z = -Math.PI / 4;
+    thumbSeg.position.set(-0.02, -0.02, 0.03);
+    handGroup.add(thumbSeg);
+
+    // Point the hand slightly forward and scale up for visibility
+    handGroup.rotation.x = -Math.PI / 8;
+    handGroup.scale.set(3, 3, 3);
+    saberGroup.add(handGroup);
+
+    // Input Tracking (Laptop)
+    const keys = { ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', (e) => {
+      if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+    });
+
+    // Setup UI Listeners
+    document.getElementById('btn-laptop').addEventListener('click', () => startGame('laptop'));
+    document.getElementById('btn-vr').addEventListener('click', () => {
+      // Need to click the injected VRButton to actually enter immersive mode
+      const vrBtn = document.getElementById('VRButton');
+      if (vrBtn) vrBtn.click();
+      startGame('vr');
+    });
+    document.getElementById('btn-restart').addEventListener('click', () => startGame(controlMode));
+
+    renderer.xr.addEventListener('sessionstart', () => {
+      if (state === 'menu') startGame('vr');
+    });
+    renderer.xr.addEventListener('sessionend', () => {
+      endGame();
+      state = 'menu';
+      updateUI();
+    });
+
+    function updateUI() {
+      elMenu.classList.toggle('hidden', state !== 'menu');
+      elHud.classList.toggle('hidden', state !== 'playing');
+      elGameOver.classList.toggle('hidden', state !== 'gameover');
+      
+      if (state === 'playing') {
+        elScore.innerText = score;
+        elLives.innerText = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, 3 - lives));
+      } else if (state === 'gameover') {
+        elFinalScore.innerText = score;
+      }
+    }
+
+    function startGame(mode) {
+      controlMode = mode;
+      state = 'playing';
+      score = 0;
+      lives = 3;
+      saberColor = 'red';
+      
+      // Cleanup field
+      blocks.forEach(b => scene.remove(b.mesh));
+      blocks = [];
+      particles.forEach(p => scene.remove(p.mesh));
+      particles = [];
+      blockSpawnTimer = 0;
+
+      updateSaberAppearance();
+      updateUI();
+
+      if (controlMode === 'laptop') {
+        // Position saber for desktop
+        saberGroup.position.set(0, 1.2, SLICE_Z - 0.5);
+        saberGroup.rotation.set(Math.PI / 4, 0, 0); // Pointed slightly forward
+        // Detach from controller if it was attached
+        scene.add(saberGroup); 
+      } else {
+        // VR mode
+        saberGroup.position.set(0, 0, 0);
+        saberGroup.rotation.set(-Math.PI / 2, 0, 0); // Point forward out of controller
+        controller.add(saberGroup);
+      }
+    }
+
+    function endGame() {
+      state = 'gameover';
+      updateUI();
+    }
+
+    function updateSaberAppearance() {
+      const hex = saberColor === 'red' ? COLOR_RED : COLOR_BLUE;
+      matArmor.color.setHex(hex);
+      matArmor.emissive.setHex(hex);
+      
+      elColorInd.innerText = saberColor.toUpperCase();
+      elColorInd.style.color = saberColor === 'red' ? 'var(--red)' : 'var(--blue)';
+    }
+
+    function spawnBlock() {
+      const colorType = Math.random() < 0.5 ? 'red' : 'blue';
+      const hex = colorType === 'red' ? COLOR_RED : COLOR_BLUE;
+      
+      const geo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+      const mat = new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      
+      // Random X between -1.5 and 1.5, Y around 1.2 to 1.6
+      mesh.position.set((Math.random() - 0.5) * 3, 1.0 + Math.random() * 0.8, SPAWN_Z);
+      scene.add(mesh);
+
+      blocks.push({ mesh, colorType, dead: false });
+    }
+
+    function spawnParticles(pos, colorHex) {
+      for (let i = 0; i < 15; i++) {
+        const geo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+        const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        
+        const velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 6
+        );
+        scene.add(mesh);
+        particles.push({ mesh, velocity, life: 1.0 });
+      }
+    }
+
+    const clock = new THREE.Clock();
+    
+    // Reusable Box3s for collision
+    const saberBox = new THREE.Box3();
+    const blockBox = new THREE.Box3();
+
+    renderer.setAnimationLoop(() => {
+      const dt = clock.getDelta();
+      renderer.render(scene, camera);
+
+      if (state !== 'playing') return;
+
+      // Laptop Controls
+      if (controlMode === 'laptop') {
+        const speed = 4;
+        if (keys.ArrowLeft) saberGroup.position.x -= speed * dt;
+        if (keys.ArrowRight) saberGroup.position.x += speed * dt;
+        saberGroup.position.x = Math.max(-2, Math.min(2, saberGroup.position.x));
+      }
+
+      // Spawning
+      blockSpawnTimer -= dt;
+      if (blockSpawnTimer <= 0) {
+        spawnBlock();
+        blockSpawnTimer = 0.5 + Math.random() * 1.0; // Every 0.5 to 1.5s
+      }
+
+      // Update Saber bounding box based on world position
+      saberBox.setFromObject(handGroup);
+
+      // Block Logic
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (b.dead) continue;
+
+        b.mesh.position.z += BLOCK_SPEED * dt;
+        blockBox.setFromObject(b.mesh);
+
+        // Check Miss
+        if (b.mesh.position.z > DESPAWN_Z) {
+          b.dead = true;
+          if (b.colorType === saberColor) {
+            lives--;
+            if (lives <= 0) endGame();
+          }
+          updateUI();
+          continue;
+        }
+
+        // Check Slice
+        if (saberBox.intersectsBox(blockBox)) {
+          b.dead = true;
+          if (b.colorType === saberColor) {
+            score++;
+            saberColor = saberColor === 'red' ? 'blue' : 'red';
+            updateSaberAppearance();
+          } else {
+            lives--;
+            if (lives <= 0) endGame();
+          }
+          updateUI();
+          spawnParticles(b.mesh.position, b.colorType === 'red' ? COLOR_RED : COLOR_BLUE);
+        }
+      }
+
+      // Cleanup dead blocks
+      blocks = blocks.filter(b => {
+        if (b.dead) scene.remove(b.mesh);
+        return !b.dead;
+      });
+
+      // Update Particles
+      particles = particles.filter(p => {
+        p.life -= dt * 2;
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          p.mesh.geometry.dispose();
+          p.mesh.material.dispose();
+          return false;
+        }
+        p.mesh.position.addScaledVector(p.velocity, dt);
+        p.mesh.scale.setScalar(p.life);
+        return true;
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+  </script>
 </body>
 </html>
